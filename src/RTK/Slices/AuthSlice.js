@@ -1,9 +1,12 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import axios from "axios"
 
+// Get the API URL from environment variables or use a default
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
 // Create an axios instance with default configuration
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

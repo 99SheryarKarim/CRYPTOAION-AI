@@ -4,28 +4,53 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: #1c2030;
     padding: 20px;
+    background-color: #0f1219;
     position: relative;
     overflow: hidden;
+    background-image: 
+      radial-gradient(circle at 20% 20%, rgba(62, 184, 176, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(62, 184, 176, 0.05) 0%, transparent 50%);
   }
   
   .auth-card {
-    background-color: #252a3d;
+    background-color: #1a202c;
     border-radius: 16px;
     width: 100%;
     max-width: 450px;
     padding: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     position: relative;
     z-index: 1;
     animation: fadeIn 0.8s ease-out;
     margin: 20px;
+    border: 1px solid rgba(62, 184, 176, 0.1);
+    backdrop-filter: blur(10px);
   }
   
   .auth-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 36px;
+  }
+
+  .auth-header h2 {
+    color: #e2e8f0;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #3eb8b0 0%, #2c8680 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .auth-header p {
+    color: #a0aec0;
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 400px;
+    margin: 0 auto;
   }
   
   /* Logo Animation */
@@ -374,29 +399,9 @@
   
   .auth-footer {
     text-align: center;
-    margin-bottom: 25px;
-  }
-  
-  .auth-footer p {
-    color: #a0a0a0;
-    font-size: 14px;
-    margin: 0;
-  }
-  
-  .toggle-button {
-    background: none;
-    border: none;
-    color: #3eb8b0;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 5px;
-    transition: color 0.3s ease;
-  }
-  
-  .toggle-button:hover {
-    color: #8cdbf6;
-    text-decoration: underline;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(62, 184, 176, 0.1);
   }
   
   .social-auth {

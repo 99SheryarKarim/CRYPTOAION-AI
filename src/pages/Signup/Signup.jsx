@@ -163,12 +163,15 @@ const Signup = () => {
                 <div className="logo-dot dot-3"></div>
               </div>
             </div>
-            <h1>AION AI</h1>
-            <p className="tagline">Your Intelligent Crypto Assistant</p>
           </div>
-
-          <h2 className="auth-title">{isLogin ? "Welcome Back" : "Create Account"}</h2>
-
+          <div className="auth-header">
+            <h2>{isLogin ? "Welcome Back" : "Create Account"}</h2>
+            <p>
+              {isLogin
+                ? "Sign in to access your account"
+                : "Join us to start trading crypto"}
+            </p>
+          </div>
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -224,12 +227,16 @@ const Signup = () => {
               {loading ? "Please wait..." : (isLogin ? "Login" : "Create Account")}
             </button>
 
-            <p className="auth-switch">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button type="button" onClick={toggleAuthMode} className="switch-button">
-                {isLogin ? "Sign Up" : "Login"}
+            <div className="auth-switch">
+              <span>{isLogin ? "Don't have an account?" : "Already have an account?"}</span>
+              <button
+                className="switch-button"
+                onClick={() => setIsLogin(!isLogin)}
+                type="button"
+              >
+                {isLogin ? "Sign up" : "Login"}
               </button>
-            </p>
+            </div>
           </form>
         </div>
 
