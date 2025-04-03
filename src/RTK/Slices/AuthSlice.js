@@ -18,6 +18,7 @@ const initialState = {
   loading: false,
   toastMessage: "",
   showToast: false,
+  error: null
 }
 
 export const Login = createAsyncThunk("AuthSlice/Login", async ({ username, password }, { rejectWithValue }) => {
@@ -37,14 +38,13 @@ export const Login = createAsyncThunk("AuthSlice/Login", async ({ username, pass
   }
 })
 
-export const Register = createAsyncThunk("AuthSlice/register", async ({ email, password }, { rejectWithValue }) => {
+export const Register = createAsyncThunk("AuthSlice/register", async ({ username, password }, { rejectWithValue }) => {
   try {
-    console.log("Register attempt with:", email)
+    console.log("Register attempt with:", username)
 
-    // Make sure we're using the correct field names according to the backend API
     const userData = {
-      username: email,
-      password: password,
+      username,
+      password,
     }
 
     console.log("Sending registration data:", userData)

@@ -1,46 +1,69 @@
-# import datetime
-# import uuid
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from models.user import User, pwd_context
+import jwt
 
-# from jose import JWTError, jwt
-# from datetime import datetime
-# from fastapi import FastAPI, Depends, HTTPException, status , Body, Query
-# from fastapi import APIRouter, Depends, HTTPException, Request
-# from models.models import User , Expert, Trainer
-# from models.schemas import Email, Login, RegistrationIn,NewPassword
-# from fastapi.security import OAuth2PasswordBearer
-# from dependencies import get_user, JWT_SECRET
-# try :
-#     from dependencies import JWT_SECRET
-# except:
-#     JWT_SECRET = "IamOmarAboelfetouhMahmoudAndIDoART01129461404"
+JWT_SECRET = "your-secret-key"
+router = APIRouter()
 
-# router = APIRouter()
+class UserCreate(BaseModel):
+    username: str
+    password: str
 
-# @router.post('/login')
-# async def login(login_pydantic : Login):
-#     model = User
-#     try:
-#         reg_dict = login_pydantic.dict(exclude_unset = False)
-#     except:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='You missing some information!')
-        
-#     user = await model.findUserByEmail(reg_dict["email"])
-#     if not user: raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='Email is not signed up!')
+@router.post('/register')
+async def register(user: UserCreate):
+    # Check if username already exists
+    existing_user = await User.filter(username=user.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
     
-#     #V2 add the hash thing
-#     v = await user.verify_password_login(reg_dict["password"])
-#     if not user: raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='Password is not correct')
+    # Create new user
+    hashed_password = pwd_context.hash(user.password)
+    new_user = await User.create(
+        username=user.username,
+        password_hash=hashed_password
+    )
     
-#     # the token generation
-#     token = jwt.encode({"user_id": user.id}, JWT_SECRET, algorithm="HS256")
-#     ret = {
-#         "user": {
-#             "username": user.username,
-#             "avatar": user.picture if user.hasPicture() else None,
-#         },
-#         "token": token
-#     }
-#     return ret
+    # Generate token
+    token = jwt.encode({"user_id": new_user.id}, JWT_SECRET, algorithm="HS256")
+    
+    return {
+        "user": {
+            "username": new_user.username,
+        },
+        "token": token
+    }
+
+@router.post('/login')
+async def login(user: UserCreate):
+    # Find user
+    db_user = await User.filter(username=user.username).first()
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+    
+    # Verify password
+    if not db_user.verify_password(user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+    
+    # Generate token
+    token = jwt.encode({"user_id": db_user.id}, JWT_SECRET, algorithm="HS256")
+    
+    return {
+        "user": {
+            "username": db_user.username,
+        },
+        "token": token
+    }
 
     
 # # works and tested
