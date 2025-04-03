@@ -1432,7 +1432,18 @@ const Predict = () => {
   }
 
   return (
-    <div className="market-predict__container">
+    <div
+      className="market-predict__container"
+      style={{
+        maxWidth: "1300px",
+        margin: "0 auto",
+        padding: "20px",
+        color: "#e0e0e0",
+        backgroundColor: "#121621",
+        minHeight: "100vh",
+        animation: "market-predict-fade-in 0.5s ease-in-out",
+      }}
+    >
       {/* Enhanced Notification System */}
       <div className="market-predict__notifications">
         <AnimatePresence>
