@@ -30,17 +30,20 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h1>AION AI</h1>
-        <div className="user-info">
+        <div className="welcome-section">
+          <h1>Welcome, {username || 'User'}! 👋</h1>
           <button onClick={handleLogout} className="logout-button">
-            Sign Out
+            Logout
           </button>
         </div>
       </div>
 
       <div className="dashboard-content">
-        <h2>Your AI-Powered Crypto Assistant</h2>
-        <p>Welcome to your personal crypto trading dashboard. AION AI is here to help you make smarter trading decisions with advanced AI-driven insights and real-time market analysis.</p>
+        <div className="dashboard-title">
+          <h2>Your AI-Powered Crypto Assistant</h2>
+          <p className="subtitle">AION AI Dashboard</p>
+        </div>
+        <p className="dashboard-description">Your personal crypto trading dashboard is ready. AION AI is here to help you make smarter trading decisions with advanced AI-driven insights and real-time market analysis.</p>
         
         {/* Add more dashboard sections here as needed */}
       </div>

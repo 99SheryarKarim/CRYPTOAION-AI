@@ -22,15 +22,15 @@ function Header() {
     setIsMenuOpen(false)
   }
 
-  const handleContactClick = () => {
-    closeMenu()
-    navigate("/contact")
-  }
-
   const handleLogout = () => {
     dispatch(clearToken())
     closeMenu()
-    navigate("/")
+    navigate("/signup")
+  }
+
+  const handleContactClick = () => {
+    closeMenu()
+    navigate("/contact")
   }
 
   return (

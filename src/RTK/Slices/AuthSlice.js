@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import axios from "axios"
 
 // Get the API URL from environment variables or use a default
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_URL = "http://127.0.0.1:8000";
 
 // Create an axios instance with default configuration
 const api = axios.create({
@@ -11,8 +11,27 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: false, // Set to true if your API uses cookies for authentication
+  validateStatus: function (status) {
+    return status >= 200 && status < 500; // Handle only server errors as errors
+  }
 })
+
+// Add request interceptor to handle redirects
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 308) {
+      // Handle redirect
+      const redirectUrl = error.response.headers.location;
+      return api.request({
+        method: error.config.method,
+        url: redirectUrl,
+        data: error.config.data
+      });
+    }
+    return Promise.reject(error);
+  }
+)
 
 const initialState = {
   username: null,
@@ -27,6 +46,7 @@ const initialState = {
 export const Login = createAsyncThunk("AuthSlice/Login", async ({ username, password }, { rejectWithValue }) => {
   try {
     console.log("Login attempt with:", username)
+    console.log("API URL:", API_URL)
 
     const response = await api.post("/auth/login", {
       username,
@@ -34,16 +54,44 @@ export const Login = createAsyncThunk("AuthSlice/Login", async ({ username, pass
     })
 
     console.log("Login response:", response.data)
-    return response.data
+    
+    // Handle the token format from the backend
+    const token = response.data.access_token || response.data.token
+    if (!token) {
+      throw new Error("No token received from server")
+    }
+
+    // Store token in localStorage
+    localStorage.setItem("token", token)
+
+    return {
+      access_token: token,
+      username: username
+    }
   } catch (error) {
-    console.error("Login error:", error.response || error)
-    return rejectWithValue(error)
+    console.error("Login error:", error)
+    console.error("Full error object:", JSON.stringify(error, null, 2))
+
+    if (error.response) {
+      console.error("Error response data:", error.response.data)
+      console.error("Error response status:", error.response.status)
+      console.error("Error response headers:", error.response.headers)
+      return rejectWithValue(error.response.data)
+    }
+
+    if (error.request) {
+      console.error("Error request:", error.request)
+      return rejectWithValue({ detail: "No response received from server. Please check your connection." })
+    }
+
+    return rejectWithValue({ detail: error.message || "Login failed. Please try again." })
   }
 })
 
 export const Register = createAsyncThunk("AuthSlice/register", async ({ username, password }, { rejectWithValue }) => {
   try {
     console.log("Register attempt with:", username)
+    console.log("API URL:", API_URL)
 
     const userData = {
       username,
@@ -55,19 +103,34 @@ export const Register = createAsyncThunk("AuthSlice/register", async ({ username
     const response = await api.post("/auth/register", userData)
 
     console.log("Registration response:", response.data)
-    return response.data
-  } catch (error) {
-    // Log the full error for debugging
-    console.error("Registration error:", error)
+    
+    // If registration includes a token, store it
+    if (response.data.access_token) {
+      localStorage.setItem("token", response.data.access_token)
+    }
 
-    // Log the response data if available
+    return {
+      message: response.data.message || "Registration successful",
+      user: response.data.user,
+      access_token: response.data.access_token
+    }
+  } catch (error) {
+    console.error("Registration error:", error)
+    console.error("Full error object:", JSON.stringify(error, null, 2))
+
     if (error.response) {
       console.error("Error response data:", error.response.data)
       console.error("Error response status:", error.response.status)
       console.error("Error response headers:", error.response.headers)
+      return rejectWithValue(error.response.data)
     }
 
-    return rejectWithValue(error)
+    if (error.request) {
+      console.error("Error request:", error.request)
+      return rejectWithValue({ detail: "No response received from server. Please check your connection." })
+    }
+
+    return rejectWithValue({ detail: error.message || "Registration failed. Please try again." })
   }
 })
 

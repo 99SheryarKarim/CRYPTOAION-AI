@@ -1,42 +1,55 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from routes.auth_routes import router as auth_router
-# Temporarily commenting out prediction router
-# from routes.prediction import router as prediction_router
 from config import settings
 from tortoise.contrib.fastapi import register_tortoise
-from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 app = FastAPI()
+handler = Mangum(app)
 
-# Register routes
-app.include_router(auth_router, prefix="/auth")
-# Temporarily commenting out prediction router
-# app.include_router(prediction_router, prefix="/pred")
+# Configure CORS for local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+# Register routes with tags and prefix
+app.include_router(
+    auth_router,
+    prefix="/auth",
+    tags=["Authentication"],
+    responses={404: {"description": "Not found"}}
+)
+
+# Get the DATABASE_URL from environment variable
+DATABASE_URL = os.getenv("DATABASE_URL", settings.DATABASE_URL)
+
+# If using PostgreSQL, convert the URL format
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Register Tortoise ORM
 register_tortoise(
     app,
-    db_url=settings.DATABASE_URL,
+    db_url=DATABASE_URL,
     modules={"models": ["models.user"]},
     generate_schemas=True,
     add_exception_handlers=True,
 )
 
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:5173",  # Example for React development server
-    "http://localhost:3000",  # Example for React development server
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],   # Allow all headers
-)
-
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the FastAPI MVC Authentication Example!"}
+    return {
+        "status": "success",
+        "message": "CryptoAion API is running!",
+        "version": "1.0.0"
+    }
+
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    return {"detail": "OK"}

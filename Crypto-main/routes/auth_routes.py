@@ -1,236 +1,112 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from pydantic import BaseModel
 from models.user import User, pwd_context
 import jwt
+from config import settings
 
-JWT_SECRET = "your-secret-key"
 router = APIRouter()
 
 class UserCreate(BaseModel):
     username: str
     password: str
+    
+    class Config:
+        from_attributes = True
 
-@router.post('/register')
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    username: str
+    
+    class Config:
+        from_attributes = True
+
+@router.post('/register', status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate):
-    # Check if username already exists
-    existing_user = await User.filter(username=user.username).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+    try:
+        # Check if username already exists
+        existing_user = await User.filter(username=user.username).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already registered"
+            )
+        
+        # Create new user
+        hashed_password = pwd_context.hash(user.password)
+        new_user = await User.create(
+            username=user.username,
+            password_hash=hashed_password
         )
-    
-    # Create new user
-    hashed_password = pwd_context.hash(user.password)
-    new_user = await User.create(
-        username=user.username,
-        password_hash=hashed_password
-    )
-    
-    # Generate token
-    token = jwt.encode({"user_id": new_user.id}, JWT_SECRET, algorithm="HS256")
-    
-    return {
-        "user": {
-            "username": new_user.username,
-        },
-        "token": token
-    }
+        
+        # Generate token for immediate login
+        token = jwt.encode({"sub": new_user.username}, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "username": new_user.username
+        }
+    except Exception as e:
+        print(f"Registration error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @router.post('/login')
 async def login(user: UserCreate):
-    # Find user
-    db_user = await User.filter(username=user.username).first()
-    if not db_user:
+    try:
+        # Find user
+        db_user = await User.filter(username=user.username).first()
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password"
+            )
+        
+        # Verify password
+        if not db_user.verify_password(user.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password"
+            )
+        
+        # Generate token
+        token = jwt.encode({"sub": db_user.username}, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "username": db_user.username
+        }
+    except Exception as e:
+        print(f"Login error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
-        )
-    
-    # Verify password
-    if not db_user.verify_password(user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
-        )
-    
-    # Generate token
-    token = jwt.encode({"user_id": db_user.id}, JWT_SECRET, algorithm="HS256")
-    
-    return {
-        "user": {
-            "username": db_user.username,
-        },
-        "token": token
-    }
-
-    
-# # works and tested
-# @router.post('/register')
-# async def register(reg_pydantic : RegistrationIn):
-#     model = User
-#     try:
-#            reg_dict = reg_pydantic.dict(exclude_unset = False)
-#     except:
-#            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='You missing some information!')
-#     # verify the input
-#     verify = await User.verifyEmailAndUsername(reg_dict, reg_dict.keys())
-#     if verify is not None:
-#         return await verify
-    
-#     # save in database
-#     user = await model.create(**reg_dict)
-#     await user.save()
-#     # the token generation
-#     token = jwt.encode({"user_id": user.id}, JWT_SECRET, algorithm="HS256")
-#     ret = {
-#         "user": {
-#             "username": user.username,
-#             "avatar": user.picture if user.hasPicture() else None,
-#         },
-#         "token": token
-#     }
-#     return ret
-
-# @router.post('/register/genderin')
-# async def genderin(genderin : bool,
-# user = Depends(get_user)
-# ):
-#     await user.setGender(genderin)
-#     return "done"
-    
-# @router.post('/register/agein')
-# async def agein(agein : int,
-# user = Depends(get_user)
-# ):
-#     await user.setAge(agein)
-#     return "done"
-    
-# @router.post('/register/w_heightin')
-# async def weightandhightin(weightin : int, heightin : int,
-# user = Depends(get_user)
-# ):
-#     await user.setHeight(heightin)
-#     await user.setWeight(weightin)
-#     return "done"
-    
-# @router.post('/register/goalin')
-# async def goalin(goalin : str,
-# user = Depends(get_user)
-# ):
-#     await user.setGoal(goalin)
-#     return "done"
-
-# @router.post('/register/experiencein')
-# async def experiencein(experiencein : str
-# , user = Depends(get_user)
-# ):
-#     await user.setExprienceLevel(experiencein)
-#     return "done"
-    
-
-# def Generate_code():
-#     '''
-#     this function should generate a unique string everythime it runs
-#     '''
-#     code = uuid.uuid1()
-#     return code
-    
-    
-# @router.post('/forgotpassword')
-# async def forgot_password(req: Request, email:Email):
-#     # check user exsited
-#     model = User
-#     user = await model.findUserByEmail(email.dict().get("email"))
-#     if not user:
-#         raise HTTPException(HTTP_404_NOT_FOUND, "Not Found")
-    
-#     # create a reset code and save it in the db
-#     code = Generate_code()
-#     r = await user.setForgotPasswordKey(code)
-#     '''
-#     send the mail with the link containg r : /forgot-password/{code}
-#     '''
-#     return {"your reset code is : " : r }
-
-# #add user id and add it to the database search
-# @router.post('/forgot-password/{code}')
-# async def reset_password(code:str, new_password: NewPassword):
-#     # reset the password in the database
-    
-#     # check code exsits
-#     model = Buser
-#     user = await model.findForgotPasswordKey(code)
-#     if not user:
-#         raise HTTPException(HTTP_404_NOT_FOUND, "Code is Incorrect")
-    
-#     # validate if expired
-#     body, resource_fields = await user.getForgotPasswordKey()
-#     v = await model.validateForgotPasswordKey(resource_fields,body)
-#     if v is not None:
-#         return v
-    
-#     # validate the password
-#     body, resource_fields = await new_password.getData()
-#     v = await rest_logic.validate(model, resource_fields, body)
-#     if v is not None:
-#         return v
-#     # reset the password in the database
-#     r = await user.resetPassword(body["password"])
-#     return "Done"
-
-
-
-# @router.get('/test_deletethis')
-# async def get_all_users():
-#     return await User.all()
-
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import timedelta
-from passlib.context import CryptContext
-
-from controllers.auth import authenticate_user, create_access_token
-from models.user import User
-from schemas.auth import Token, UserCreate
-from config import settings
-from middlewares.auth_middleware import get_current_user
-
-router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-@router.post("/register")
-async def register(user: UserCreate = Body(...)):
-    existing_user = await User.get_or_none(username=user.username)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username already exists")
-
-    hashed_password = pwd_context.hash(user.password)
-    new_user = await User.create(username=user.username, password_hash=hashed_password)
-
-    return {"message": "User registered successfully", "user": {"username": new_user.username}}
-
-
-@router.post("/login", response_model=Token)
-async def login(user: UserCreate = Body(...)):
-    user = await authenticate_user(user.username, user.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@router.get("/protected")
-async def protected_route(current_user: dict = Depends(get_current_user)):
-    return {"message": f"Hello {current_user['username']}, you are authorized!"}
+@router.get('/me')
+async def get_current_user(token: str = Depends(lambda x: x)):
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials"
+            )
+        user = await User.filter(username=username).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        return {"username": user.username}
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials"
+        )

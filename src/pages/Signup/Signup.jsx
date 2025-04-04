@@ -29,9 +29,19 @@ const Signup = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (mounted && token) {
+      console.log("Token found, redirecting to dashboard:", token)
       navigate("/dashboard")
     }
   }, [token, navigate, mounted])
+
+  // Check token in localStorage on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token")
+    if (storedToken) {
+      console.log("Found token in localStorage:", storedToken)
+      navigate("/dashboard")
+    }
+  }, [])
 
   // Handle form changes
   const handleChange = (e) => {
@@ -77,10 +87,22 @@ const Signup = () => {
         ).unwrap()
 
         console.log("Login success:", loginResult)
-        dispatch(setToastMessage("Login successful!"))
-        dispatch(setToastStatus("success"))
-        dispatch(setShowToast(true))
-        navigate("/dashboard")
+        
+        if (loginResult.access_token) {
+          // Store token in localStorage
+          localStorage.setItem("token", loginResult.access_token)
+          
+          // Update UI
+          dispatch(setToastMessage("Login successful!"))
+          dispatch(setToastStatus("success"))
+          dispatch(setShowToast(true))
+          
+          // Navigate to dashboard
+          console.log("Redirecting to dashboard after successful login")
+          navigate("/dashboard")
+        } else {
+          throw new Error("No token received from server")
+        }
       } else {
         // Handle registration
         const registrationResult = await dispatch(
